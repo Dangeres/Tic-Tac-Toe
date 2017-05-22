@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <cmath>
 #include <windows.h>
+#include <cstring>
 #include <GL/glut.h>
 
 using namespace std;
@@ -15,36 +16,60 @@ const int Scale = 140; // scale for size of ceil.
 const int wh = N * Scale; // w and h.
 
 bool gamer = 1; // 1 - x, 0 - O
-int win = 0; // 0 no win
+
+byte win = 0; // 0 no win
 int coun = 0; // count that i did involute.
 
 int winColumn = -1, winLine = -1; // wins column, line.
 
-int c[N][N]; //create an array of value 
+int c[N][N]; //create a board
+
+int posmin_line = 0;
+int posmin_column = 0;
+
+/* block of forwards */
+void display();
+void checkWin();
+int get_best_move(bool, int);
+/* block of forwards */
+
 
 void init() {
 	glClearColor(1, 1, 1, 1.0);
 
-	for (int a = 0; a < N; a++) {
-		for (int b = 0; b < N; b++) {
-			c[a][b] = -1;
-		}
-	}
+	memset(c, -1, sizeof(c)); // from 0 to sizeof(c) replace value to -1;
+
+							  /*cout << "who's begin? 1 - x, 0 - O" << endl;
+							  cin >> gamer;*/
 
 	gamer = 1;
 	coun = 0;
-}
 
-void display(); // forward of display
-void checkWin(); // forward of checkWin
+	cout << "========================================================================================" << endl;
+	cout << "fiel has been clearing." << endl;
+	cout << "========================================================================================" << endl;
+
+	/*c[0][0] = 1;
+	c[1][1] = 0;*/
+
+	/*if (!gamer) {
+	get_best_move(0,0);
+	c[posmin_line][posmin_column] = 0;
+	coun = 1;
+	gamer = 1;
+	}
+	else {
+	coun = 0;
+	}*/
+}
 
 void ifWin(int player, string text) { //if -1 then field had been fill.
 	if (player != -1) cout << " " << text << " win. Player is " << player << endl;
 	else cout << text << endl;
 
-	if (player == -1) glClearColor(235 * scaleRGB, 168 * scaleRGB, 168 * scaleRGB, 0);
-	if (player == 1) glClearColor(68 * scaleRGB, 168 * scaleRGB, 71 * scaleRGB, 0); // if x
-	if (player == 0) glClearColor(68 * scaleRGB, 125 * scaleRGB, 168 * scaleRGB, 0); // if 0
+	if (player == -1) glClearColor(235 * scaleRGB, 168 * scaleRGB, 168 * scaleRGB, 0); // if need redraw
+	if (player == 1) glClearColor(68 * scaleRGB, 168 * scaleRGB, 71 * scaleRGB, 0); // if x wons
+	if (player == 0) glClearColor(68 * scaleRGB, 125 * scaleRGB, 168 * scaleRGB, 0); // if 0 wons
 
 	display();
 
@@ -170,7 +195,7 @@ void drawCircle(float x, float y, float r, int amountSegments) {
 
 	for (int i = 0; i < amountSegments; i++) {
 
-		float angle = 2.0 * 3.1415926 * float(i) / float(amountSegments);
+		float angle = 2.0 * 3.1415926 * float(i) / float(amountSegments); //you think that you have sin and cos from 0 to 1 as 0 to amounts
 
 		float dx = r * cosf(angle);
 		float dy = r * sinf(angle);
@@ -226,18 +251,178 @@ void display() {
 	glutSwapBuffers();
 }
 
+int _win(bool player) { // 1 = x, 0 = O
+
+	bool Twin = 1;
+
+	for (int line = 0; line < N; line++) { //check gorizontal Twin
+
+		Twin = 1;
+
+		for (int column = 0; column < N; column++) {
+			if (c[line][column] != player) {
+				Twin = 0;
+				break;
+			}
+		}
+
+		if (Twin) {
+			return 1;
+		}
+
+	}
+
+	for (int column = 0; column < N; column++) { //check vertical Twin
+
+		Twin = 1;
+
+		for (int line = 0; line < N; line++) {
+			if (c[line][column] != player) {
+				Twin = 0;
+				break;
+			}
+		}
+
+		if (Twin) {
+			return 1;
+		}
+
+	}
+	//--------------block main diagonal
+	Twin = 1;
+
+	for (int column = N - 1, line = 0; column >= 0 && line < N; column--, line++) {//check main diagonal
+		if (c[column][line] != player) {
+			Twin = 0;
+			break;
+		}
+	}
+	if (Twin) {
+		return 1;
+	}
+
+	//-------------------block main diagonal
+
+	//--------------block not main diagonal
+	Twin = 1;
+
+	for (int column = 0, line = 0; column<N && line<N; column++, line++) {//check not main diagonal
+		if (c[column][line] != player) {
+			Twin = 0;
+			break;
+		}
+	}
+	if (Twin) {
+		return 1;
+	}
+
+	//-------------------block not main diagonal
+
+	return 0;
+}
+
+bool isFull() {// Board is full
+
+	for (int i = 0; i<N; i++) {
+		for (int j = 0; j< N; j++) {
+			if (c[i][j] != 1) {
+				if (c[i][j] != 0) {
+					return 0;
+				}
+			}
+		}
+	}
+	return 1;
+}
+
+int get_best_move(bool player, int n) { // n - deep recursion.
+	int res = 0; // result 
+
+	int max = -99999;
+	int min = 99999;
+
+	if (_win(1)) { // if X won
+		return 10;
+	}
+
+	if (_win(0)) { // if O won
+		return -10;
+	}
+
+	if (isFull()) { // if virtual board is full
+		return 0;
+	}
+
+	for (int i = 0; i < N; i++) {
+		for (int j = 0; j < N; j++) {
+
+			if (c[i][j] == -1) {
+				if (player == 0) {
+					c[i][j] = 0; // set O in i,j
+
+					res = get_best_move(1, n + 1);
+					c[i][j] = -1;
+
+					if (res < min) {
+						min = res;
+						if (n == 0) {
+							posmin_line = i;
+							posmin_column = j;
+						}
+
+					}
+				}
+
+				if (player == 1) {
+					c[i][j] = 1; // set X in i,j
+
+					res = get_best_move(0, n + 1);
+					c[i][j] = -1;
+
+					if (res > max) {
+						max = res;
+						if (n == 0) {
+							posmin_line = i;
+							posmin_column = j;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if (player == 1) return max;
+	else return min;
+}
+
 void MousePressed(int button, int state, int x, int y) {
 
-	if (state == GLUT_DOWN) {
+	if (state == GLUT_DOWN &&  button == GLUT_RIGHT_BUTTON) { // if right mouse - clear fiel.
+		init();
+	}
+
+	if (state == GLUT_DOWN && button == GLUT_LEFT_BUTTON) { // if left mouse - check board
 
 		int row = floor(y / Scale);
 		int col = floor(x / Scale);
 
 		if (c[row][col] == -1) { // if we have empty slot then need use it
 			c[row][col] = gamer;
-			cout << x << " " << y << ". row " << row << ", col " << col << " count = " << coun << endl;
-			gamer = !gamer;
+			cout << x << " " << y << ". line " << row + 1 << ", col " << col + 1 << endl;
+
+			gamer = !gamer; //change hod at O
 			coun++;
+
+			checkWin();
+
+			if (!gamer) {
+				get_best_move(0, 0);
+				c[posmin_line][posmin_column] = 0;
+
+				gamer = 1; //change hod at X
+				coun++;
+			}
+
 			checkWin();
 		}
 	}
