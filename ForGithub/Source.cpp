@@ -226,6 +226,19 @@ void display() {
 	glutSwapBuffers();
 }
 
+void hodO() {
+
+	int rand1 = rand() % N;
+	int rand2 = rand() % N;
+
+	while (c[rand1][rand2] != -1) {
+		rand1 = rand() % N;
+		rand2 = rand() % N;
+	}
+
+	c[rand1][rand2] = 0;
+}
+
 void MousePressed(int button, int state, int x, int y) {
 
 	if (state == GLUT_DOWN) {
@@ -238,6 +251,12 @@ void MousePressed(int button, int state, int x, int y) {
 			cout << x << " " << y << ". row " << row << ", col " << col << " count = " << coun << endl;
 			gamer = !gamer;
 			coun++;
+			checkWin();
+			if (!gamer) {
+				hodO();
+				gamer = 1;
+				coun++;
+			}
 			checkWin();
 		}
 	}
